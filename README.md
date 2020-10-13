@@ -41,6 +41,34 @@ I will document the process with Etcher to write Armbian image into SD cards.
 * SSH into the box by `ssh root@<IP>` and the default password is `1234`
 * Immediately after login the first time it will ask the user to change `root` password and create a new regular user account
 
+## Common set up
+
+* Set the hostname (replace `<NEW_HOSTNAME>` with the name you desire)
+
+  ```shell
+  sed -i "s/$HOSTNAME/<NEW_HOSTNAME>/g" /etc/hostname /etc/hosts
+  ```
+
+* Set the timezone
+
+  ```shell
+  dpkg-reconfigure tzdata
+  ```
+
+  Select the timezone where NanoPi is going to be located.
+
+* Upgrade the system to the latest version of all packages by running:
+
+  ```shell
+  apt update && apt -y upgrade
+  ```
+
+* Install iptables
+
+  ```shell
+  apt install -y iptables
+  ```
+
 ## Setup DNS-over-HTTPS
 
 ## PiHole installation
