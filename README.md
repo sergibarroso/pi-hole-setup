@@ -240,7 +240,7 @@ To test the package behaviour, we can run:
 unattended-upgrade --debug --dry-run
 ```
 
-## Log rotate
+## Logrotate
 
 Armbian in NanoPi has the logs located in two directories. The first is a ramdisk (`/var/log/`) which is usually around 50MB size. This is definitely not enough to keep our logs for more than a week, and depending on how much connection we have a day will not even hold 24h of logs before you start getting errors such as:
 
@@ -252,13 +252,49 @@ The second one is located in the root partition (`/var/log.hdd/`).
 
 The good practice here would be to save all logs in the disk, or at least safekeeping a compressed copy in the disk for security.
 
-But if you're using this at home and you don't care much about them apart from realtime debugging when errors happen, then you can basically discard all logs after a day using `logrotate` :)
+### Armbian ram log
 
 Let's start by increasing the `/var/log` ramdisk from 50MB to 100MB.
 
-Edit `/etc/default/armbian-ramlog` and set `SIZE` to 100M.
+* Edit `/etc/default/armbian-ramlog` file
 
-apply the changes by running `systemctl restart armbian-ramlog.service`
+  ```shell
+  nano /etc/default/armbian-ramlog
+  ```
+
+* Set `SIZE` to 100M
+
+* Apply the changes
+
+  ```shell
+  systemctl restart armbian-ramlog.service
+  ```
+
+### Pi-Hole logs
+
+Our main log generator is going to be Pi-Hole.
+
+By default Pi-Hole stores all logs in `/var/log/pihole*` but as we already know that location is inside the ramdisk on Armbian. So, we have to move them to another location such as `/var/log.hdd/`
+
+* Edit Pi-Hole config file
+
+  ```shell
+  nano /etc/pihole/pihole-FTL.conf
+  ```
+
+* Set log files location
+
+  ```text
+  LOGFILE=/var/log.hdd/pihole-FTL.log
+  ```
+
+* Restart the service
+
+  ```shell
+  systemctl restart pihole-FTL.service
+  ```
+
+### Armbian logrotate
 
 Now, let's move to Logrotate. The main config file is located at `/etc/logrotate.conf` and then all sort of directory specific Logrotate definitions inside `/etc/logrotate.d`, let's first edit the default behaviour by:
 
@@ -308,7 +344,7 @@ And now let's create the new config file at `/etc/logrotate.d/nanopi` with the f
 }
 ```
 
-What this config is going to do is rotate all log files in `/var/log/` and `/var/log.hdd` as well their child directories.
+What this config is going to do is rotate all log files in `/var/log/` as well their child directories.
 
 This can be tested by:
 
