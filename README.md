@@ -418,3 +418,12 @@ These are just some good practices to hardening the SSH daemon.
   ```shell
   systemctl restart ssh
   ```
+
+## Clean the system
+
+* Disable unused SystemD services
+
+  ```shell
+  systemctl stop wpa_supplicant systemd-rfkill.service systemd-rfkill.socket
+  systemctl disable wpa_supplicant systemd-rfkill.service systemd-rfkill.socket
+  ```
