@@ -424,6 +424,6 @@ These are just some good practices to hardening the SSH daemon.
 * Disable unused SystemD services
 
   ```shell
-  systemctl stop wpa_supplicant systemd-rfkill.service systemd-rfkill.socket
-  systemctl disable wpa_supplicant systemd-rfkill.service systemd-rfkill.socket
+  systemctl stop wpa_supplicant systemd-rfkill.service systemd-rfkill.socket hostapd
+  systemctl disable wpa_supplicant systemd-rfkill.service systemd-rfkill.socket hostapd
   ```
