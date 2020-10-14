@@ -16,9 +16,9 @@ For this example I'm going to use (and test) the set up in a [Nano Pi Neo3](http
 
 Long story short, DNS protocol uses plain text. Any DNS servers that are contacted plus any routers on the path to those DNS servers would be able to figure out which sites you’re visiting. As you can imagine this could be easily tracked, logged and even modified. Here’s where DNS-over-HTTPS comes into play enabling point to point encryption from the our DNS server to the destination DNS, nobody in between can (easily :D) snoop on or even spoof your web traffic.
 
-### Why Pi-Hole
+### Why Pi-hole
 
-From the official web site we read `The Pi-hole® is a DNS sinkhole that protects your devices from unwanted content, without installing any client-side software`, so basically Pi-Hole runs in our local network as a DNS resolver and it kills queries for known bad domains and supports DNS-over-HTTP requests.
+From the official web site we read `The Pi-hole® is a DNS sinkhole that protects your devices from unwanted content, without installing any client-side software`, so basically Pi-hole runs in our local network as a DNS resolver and it kills queries for known bad domains and supports DNS-over-HTTP requests.
 
 You can find more on its site [pi-hole.net](https://pi-hole.net)
 
@@ -93,7 +93,7 @@ Here we're going to explain how to implement `DNSCrypt` because it's a more flex
   server_names = ['cloudflare']
   ```
 
-  Since port 53 is going to be used by Pi-Hole, in `listen_addresses` line set another port, i.e. 5353
+  Since port 53 is going to be used by Pi-hole, in `listen_addresses` line set another port, i.e. 5353
 
   ```text
   listen_addresses = ['127.0.0.1:5353']
@@ -137,7 +137,7 @@ Here we're going to explain how to implement `DNSCrypt` because it's a more flex
   systemctl restart dnscrypt-proxy
   ```
 
-## Pi-Hole installation
+## Pi-hole installation
 
 At the moment of writing this guide, Armbian is not officially supported by Pi-hole, but in fact as Armbian is based on Debian as Raspbian, it should work. So make sure to create the following environment variable to avoid checking the OS:
 
@@ -165,11 +165,11 @@ When you see `Select Upstream DNS Provider. To use your own, select Custom.` cho
 
 Then finish the installation steps.
 
-You should now be able to access Pi-Hole webadmin portal at [http://pi.hole/admin](http://pi.hole/admin)
+You should now be able to access Pi-hole webadmin portal at [http://pi.hole/admin](http://pi.hole/admin)
 
-<!-- ### Pi-Hole Webadmin over HTTPS
+<!-- ### Pi-hole Webadmin over HTTPS
 
-There's one thing that bothers me a lot, it's the fact that Pi-Hole web interface uses plain HTTP protocol :facepalm:
+There's one thing that bothers me a lot, it's the fact that Pi-hole web interface uses plain HTTP protocol :facepalm:
 
 In order to fix that we're going to use [CertBot](https://certbot.eff.org) to generate and maintains our [Let's Encrypt](https://letsencrypt.org) certificate and set up Lighttpd.
 
@@ -270,13 +270,13 @@ Let's start by increasing the `/var/log` ramdisk from 50MB to 100MB.
   systemctl restart armbian-ramlog.service
   ```
 
-### Pi-Hole logs
+### Pi-hole logs
 
-Our main log generator is going to be Pi-Hole.
+Our main log generator is going to be Pi-hole.
 
-By default Pi-Hole stores all logs in `/var/log/pihole*` but as we already know that location is inside the ramdisk on Armbian. So, we have to move them to another location such as `/var/log.hdd/`
+By default Pi-hole stores all logs in `/var/log/pihole*` but as we already know that location is inside the ramdisk on Armbian. So, we have to move them to another location such as `/var/log.hdd/`
 
-* Edit Pi-Hole config file
+* Edit Pi-hole-FTL config file
 
   ```shell
   nano /etc/pihole/pihole-FTL.conf
@@ -293,6 +293,28 @@ By default Pi-Hole stores all logs in `/var/log/pihole*` but as we already know 
   ```shell
   systemctl restart pihole-FTL.service
   ```
+
+### DNSmasq logs
+
+* Edit dnsmasq config file for Pi-hole
+
+  ```shell
+  nano /etc/dnsmasq.d/01-pihole.conf
+  ```
+
+* Change log facility from `log-facility=/var/log/pihole.log` to `log-facility=/var/log.hdd/pihole.log`
+
+* Edit Pi-hole logrotate config file
+
+  ```shell
+  nano /etc/pihole/logrotate
+  ```
+
+* Change the path inside the file from `/var/log` to `/var/log.hdd`, save and exit.
+
+Pi-hole will start writing and rotating to the new log files automatically.
+
+```Keep in mind tho, that on every update of Pi-hole this configuration will be reset to the default.```
 
 ### Armbian logrotate
 
