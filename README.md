@@ -55,8 +55,6 @@ I will document the process with Etcher to write Armbian image into SD cards.
   dpkg-reconfigure tzdata
   ```
 
-  Select the timezone where NanoPi is going to be located.
-
 * Upgrade the system to the latest version of all packages by running:
 
   ```shell
@@ -66,12 +64,86 @@ I will document the process with Etcher to write Armbian image into SD cards.
 * Install iptables
 
   ```shell
-  apt install -y iptables
+  apt install iptables
   ```
 
-## Setup DNS-over-HTTPS
+## Set up DNS-over-HTTPS
 
-## PiHole installation
+Before setting up Pi-hole we're going to setup a proxy to translate our DNS queries into DNS-over-HTTPS requests.
+
+There are different ways to achieve that, such as using [DNSCrypt](https://dnscrypt.info/implementations), [cloudflared](https://github.com/cloudflare/cloudflared), amongst others
+
+Here we're going to explain how to implement `DNSCrypt` because it's a more flexible solution and could be used with different DNS providers.
+
+* Install DNSCrypt-proxy
+
+  ```shell
+  apt install dnscrypt-proxy
+  ```
+
+* Customize the config file
+
+  ```shell
+  nano /etc/dnscrypt-proxy/dnscrypt-proxy.toml
+  ```
+
+  In `server_names` you can choose any from [this](https://dnscrypt.info/public-servers/) list, I suggest to use `cloudflare`
+
+  ```text
+  server_names = ['cloudflare']
+  ```
+
+  Since port 53 is going to be used by Pi-Hole, in `listen_addresses` line set another port, i.e. 5353
+
+  ```text
+  listen_addresses = ['127.0.0.1:5353']
+  ```
+
+  Also set the logging directory to `/var/log.hdd` instead
+
+  ```text
+  [query_log]
+  file = '/var/log.hdd/dnscrypt-proxy/query.log'
+
+  [nx_log]
+    file = '/var/log.hdd/dnscrypt-proxy/nx.log'
+  ```
+
+  For more information on how to customize it, please refer to the official example [here](https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml)
+
+* Enable pidfile
+
+  In order to monitor if `dnscrypt-proxy` is running we will need to enable the creation of the pid file by editing the SystemD service unit `/etc/systemd/system/multi-user.target.wants/dnscrypt-proxy.service`:
+
+  ```shell
+  nano /etc/systemd/system/multi-user.target.wants/dnscrypt-proxy.service
+  ```
+
+  Set `-pidfile` at the end of the `ExecStart` line, like:
+
+  ```text
+  ExecStart=/usr/sbin/dnscrypt-proxy -config /etc/dnscrypt-proxy/dnscrypt-proxy.toml -pidfile /var/run/dnscrypt-proxy/dnscrypt-proxy.pid
+  ```
+
+  Reload the unit files:
+
+  ```shell
+  systemctl daemon-reload
+  ```
+
+* Restart the service
+
+  ```shell
+  systemctl restart dnscrypt-proxy
+  ```
+
+## Pi-Hole installation
+
+At the moment of writing this guide, Armbian is not officially supported by Pi-hole, but in fact as Armbian is based on Debian as Raspbian, it should work. So make sure to create the following environment variable to avoid checking the OS:
+
+```shell
+export PIHOLE_SKIP_OS_CHECK=true
+```
 
 For those who want to get started quickly and conveniently may install Pi-hole using the following command:
 
@@ -87,7 +159,29 @@ chmod +x basic-install.sh
 sudo ./basic-install.sh
 ```
 
+Follow the installation steps...
+
+When you see `Select Upstream DNS Provider. To use your own, select Custom.` choose custom and add `127.0.0.1#5353`
+
+Then finish the installation steps.
+
+You should now be able to access Pi-Hole webadmin portal at [http://pi.hole/admin](http://pi.hole/admin)
+
+<!-- ### Pi-Hole Webadmin over HTTPS
+
+There's one thing that bothers me a lot, it's the fact that Pi-Hole web interface uses plain HTTP protocol :facepalm:
+
+In order to fix that we're going to use [CertBot](https://certbot.eff.org) to generate and maintains our [Let's Encrypt](https://letsencrypt.org) certificate and set up Lighttpd.
+
+* Install CertBot
+
+  ```shell
+  apt install letsencrypt
+  ``` -->
+
 ## Set up DHCP server
+
+You can either use the NanoPi as a DHCP for your LAN or your can edit your actual DHCP options to use the NanoPi IP address as the default DNS server.
 
 ## Watchdog
 
@@ -97,7 +191,7 @@ A watchdog is an electronic timer used for monitoring hardware and software func
 
 ### Why using a watchdog
 
-We use a watchdog to make sure we have a functional VPN. If a problem comes up, the computer should be able to recover itself back to a functional state. We will configure the board to reboot if WireGuard link is down for too long, or a specific process isn’t running any more.
+We use a watchdog to make sure we have a functional DNS server. If a problem comes up, the computer should be able to recover itself back to a functional state. We will configure the board to reboot if DNS doesn't respond, or a specific process isn’t running any more.
 
 ### Setup the watchdog software
 
@@ -117,13 +211,9 @@ We use a watchdog to make sure we have a functional VPN. If a problem comes up, 
 
   ```text
   log-dir = /var/log.hdd/watchdog
-
-  interface = wg0
-
-  ping = <REMOTE_WG_IP>
-
-  retry-timeout = 300
-
+  pid = /var/run/pihole-FTL.pid
+  pid = /var/run/dnscrypt-proxy/dnscrypt-proxy.pid
+  retry-timeout = 60
   interval = 30
   ```
 
@@ -140,7 +230,7 @@ We use a watchdog to make sure we have a functional VPN. If a problem comes up, 
 Security updates are crucial to keep our system safe from threats. Even tho we don't have so many services open to the world, one bug is enough to allow attackers to break into our system.
 
 ```shell
-apt install -y unattended-upgrades
+apt install unattended-upgrades
 ```
 
 The default set up of this package installs security updates for the current release. If you want to update all packages when available, take a look at the `/etc/apt/apt.conf.d/50unattended-upgrades`.
@@ -210,13 +300,6 @@ rm /etc/logrotate.d/*
 And now let's create the new config file at `/etc/logrotate.d/nanopi` with the following content:
 
 ```config
-/var/log.hdd/*.log /var/log.hdd/*/*.log {
-  daily
-  rotate 0
-  create
-  missingok
-}
-
 /var/log/*.log /var/log/*/*.log {
   daily
   rotate 0
@@ -239,25 +322,39 @@ As Logrotate is set up to run daily via Cron we don't have to do any further cha
 
 ## SSH hardening
 
-These are just some good practices to hardening our SSH daemons, especially when they are publically available.
+These are just some good practices to hardening the SSH daemon.
 
-Add those lines somewhere inside the `/etc/ssh/sshd_config` file:
+* Generate a SSH key on your workstation to connect to NanoPi using SSH certificate
 
-```shell
-# Disable root login
-PermitRootLogin no
+  ```shell
+  ssh-keygen -t rsa -N '' -f ~/.ssh/<NANOPI_HOSTNAME>
+  ```
 
-# Disable password authentication
-ChallengeResponseAuthentication no
-PasswordAuthentication no
+* Copy the content of `~/.ssh/<NANOPI_HOSTNAME>.pub` into NanoPi `~/.ssh/authorized_keys`
 
-# Limit daemon to only listen on localhost (only for WireGuard client when we enable reverse SSH)
-ListenAddress ::1
-ListenAddress 127.0.0.1
-```
+* Set your SSH config to use the certificate when connecting to NanoPi by adding a new entry in `~/.ssh/config`
 
-To apply the previous config, just restart the SSH daemon:
+  ```shell
+  Host nanopineo3
+    HostName <IP>
+    Port <SSH_PORT>
+    User <REMOTE_USER>
+    IdentityFile ~/.ssh/<NANOPI_HOSTNAME>
+  ```
 
-```shell
-systemctl restart ssh
-```
+* Edit SSH daemon config file `/etc/ssh/sshd_config` with the following lines:
+
+  ```shell
+  # Disable root login
+  PermitRootLogin no
+
+  # Disable password authentication
+  ChallengeResponseAuthentication no
+  PasswordAuthentication no
+  ```
+
+* Apply the previous config, just restart the SSH daemon:
+
+  ```shell
+  systemctl restart ssh
+  ```
