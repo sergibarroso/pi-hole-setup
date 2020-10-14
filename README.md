@@ -22,6 +22,8 @@ From the official web site we read `The Pi-hole® is a DNS sinkhole that protect
 
 You can find more on its site [pi-hole.net](https://pi-hole.net)
 
+This guide was create just by reading Pi-hole project documentation [here](https://docs.pi-hole.net)
+
 ## OS Installation
 
 ### Copy OS to SD Card
