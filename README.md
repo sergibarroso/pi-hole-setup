@@ -115,18 +115,18 @@ Here we're going to explain how to implement `DNSCrypt` because it's a more flex
 
 * Config dnscrypt-proxy.socket
 
-By default dnscrypt-proxy.socket uses it's own configuration in the SystemD socker unit. We have to edit this as well to avoid issues with Pi-hole:
+  By default dnscrypt-proxy.socket uses it's own configuration in the SystemD socker unit. We have to edit this as well to avoid issues with Pi-hole:
 
-```shell
-nano /etc/systemd/system/sockets.target.wants/dnscrypt-proxy.socket
-```
+  ```shell
+  nano /etc/systemd/system/sockets.target.wants/dnscrypt-proxy.socket
+  ```
 
-And set the ListenStream and ListenDatagram to use the correct port:
+  And set the ListenStream and ListenDatagram to use the correct port:
 
-```text
-ListenStream=127.0.2.1:5353
-ListenDatagram=127.0.2.1:5353
-```
+  ```text
+  ListenStream=127.0.2.1:5353
+  ListenDatagram=127.0.2.1:5353
+  ```
 
 Save the file and move on
 
