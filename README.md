@@ -113,6 +113,23 @@ Here we're going to explain how to implement `DNSCrypt` because it's a more flex
 
   For more information on how to customize it, please refer to the official example [here](https://github.com/DNSCrypt/dnscrypt-proxy/blob/master/dnscrypt-proxy/example-dnscrypt-proxy.toml)
 
+* Config dnscrypt-proxy.socket
+
+By default dnscrypt-proxy.socket uses it's own configuration in the SystemD socker unit. We have to edit this as well to avoid issues with Pi-hole:
+
+```shell
+nano /etc/systemd/system/sockets.target.wants/dnscrypt-proxy.socket
+```
+
+And set the ListenStream and ListenDatagram to use the correct port:
+
+```text
+ListenStream=127.0.2.1:5353
+ListenDatagram=127.0.2.1:5353
+```
+
+Save the file and move on
+
 * Enable pidfile
 
   In order to monitor if `dnscrypt-proxy` is running we will need to enable the creation of the pid file by editing the SystemD service unit `/etc/systemd/system/multi-user.target.wants/dnscrypt-proxy.service`:
