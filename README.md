@@ -128,7 +128,7 @@ Here we're going to explain how to implement `DNSCrypt` because it's a more flex
   ListenDatagram=127.0.2.1:5353
   ```
 
-Save the file and move on
+  Save the file and move on
 
 * Enable pidfile
 
